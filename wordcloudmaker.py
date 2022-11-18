@@ -69,7 +69,8 @@ if __name__ == "__main__":
     docu = txt.split(' ')
     # set as dataframe
     df = pd.DataFrame({'line': docu})
-
+    nltk.download('omw-1.4')
+    
     # get words and remove words with less than 4 characters
     cv_words = []
     for line in df['line']:
