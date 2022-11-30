@@ -86,7 +86,7 @@ if __name__ == "__main__":
     frequency_dist = nltk.FreqDist(cv_words2)
 
     print('fréquence des 10 premiers mots les plus utilisés')
-    print(frequency_dist.most_common(10)[1:])
+    print(frequency_dist.most_common(10))
 
     # generate wordcloud
     wcloud = WordCloud().generate_from_frequencies(frequency_dist)
