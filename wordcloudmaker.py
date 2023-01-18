@@ -53,6 +53,12 @@ if __name__ == "__main__":
                         required=True, help='input CV in pdf format')
     parser.add_argument('--img', type=str,
                         required=True, help='filename of the output wordcloud image')
+    parser.add_argument('--lang', type=str,
+                        required=True, help='filename of the output wordcloud image (english or french)')                        
+    parser.add_argument('--com', type=int, default=10,
+                        required=False, help='number of most common words (they are not taken into account)')                        
+    parser.add_argument('--map', type=str, default=None,
+                        required=False, help='name of the figure colormap')
 
     args = parser.parse_args()
 
@@ -80,20 +86,22 @@ if __name__ == "__main__":
 
     print(f'number of words in CV : {len(cv_words)}')
     # remove stop words
-    stopWords = stopwords.words('french')
+    stopWords = stopwords.words(args.lang)
     cv_words2 = [word for word in cv_words if word not in stopWords]
     # compute word frequency
     frequency_dist = nltk.FreqDist(cv_words2)
 
-    print('fréquence des 10 premiers mots les plus utilisés')
-    print(frequency_dist.most_common(10))
+    print('fréquence des xx premiers mots les plus utilisés')
+    print(frequency_dist.most_common(args.com))
 
     # generate wordcloud
-    wcloud = WordCloud().generate_from_frequencies(frequency_dist)
+    wcloud = WordCloud(colormap=args.map).generate_from_frequencies(frequency_dist)
+    # wcloud = WordCloud(colormap="coolwarm").generate_from_frequencies(frequency_dist)
 
     # plot figure
     plt.figure(figsize=(15, 10))
-    plt.imshow(wcloud, interpolation='bilinear')
+    plt.imshow(wcloud, interpolation='bilinear', origin='upper')
     plt.axis('off')
+    plt.margins(x=0, y=0)
     plt.savefig(args.img)
     plt.show()
