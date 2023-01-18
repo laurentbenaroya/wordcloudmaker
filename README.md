@@ -19,7 +19,7 @@ Vous pouvez mettre export PATH dans votre ~/.bashrc  pour éviter d'avoir à le 
 *Note : pipenv problem : https://github.com/pypa/pipenv/issues/5052*
 ## créer le projet
 ```bash
-$ pipenv --python 3.7
+$ pipenv --python 3.8
 $ pipenv install
 $ pipenv shell
 $ python -m textblob.download_corpora
@@ -27,4 +27,6 @@ $ python -m textblob.download_corpora
 ## go for it !!!
 génération du nuage de mots
 ```bash
-$ python wordcloudmaker.py --cv moncv.pdf --img monnuagedepoints.png
+$ pipenv shell
+$ python wordcloudmaker.py --cv moncv.pdf --img monnuagedepoints.png --map Blues --lang french
+```
