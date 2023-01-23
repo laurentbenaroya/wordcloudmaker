@@ -2,6 +2,7 @@ import io
 import pandas as pd
 import re
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pdfminer.pdfpage import PDFPage
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
@@ -59,6 +60,8 @@ if __name__ == "__main__":
                         required=False, help='number of most common words (they are not taken into account)')                        
     parser.add_argument('--map', type=str, default=None,
                         required=False, help='name of the figure colormap')
+    parser.add_argument('--hist', action='store_true', default = False,
+                        required=False, help='compute the histogram of the number of occurence of words')
 
     args = parser.parse_args()
 
@@ -88,6 +91,9 @@ if __name__ == "__main__":
     # remove stop words
     stopWords = stopwords.words(args.lang)
     cv_words2 = [word for word in cv_words if word not in stopWords]
+    if True:
+        # ad-hoc for Laurent E.
+        cv_words2 = [word.replace('commerciale', 'commercial') for word in cv_words2]
     # compute word frequency
     frequency_dist = nltk.FreqDist(cv_words2)
 
@@ -97,6 +103,38 @@ if __name__ == "__main__":
     # generate wordcloud
     wcloud = WordCloud(colormap=args.map).generate_from_frequencies(frequency_dist)
     # wcloud = WordCloud(colormap="coolwarm").generate_from_frequencies(frequency_dist)
+
+    # histogram
+    if args.hist:
+        # count word occurences
+        numwordshist = dict() 
+        for k, v in frequency_dist.items(): 
+            if v not in numwordshist.keys(): 
+                numwordshist[v] = 1 
+            else: 
+                numwordshist[v] += 1 
+        maxrep = max(numwordshist.keys())
+        # to numpy vector
+        numwordhist_np = np.zeros((maxrep+1,), dtype='int')
+        for k, v in numwordshist.items(): 
+            numwordhist_np[k] = v
+
+        # plot bar histogram
+        indexes = np.arange(1, maxrep+1)
+        values = numwordhist_np[1:]
+
+        fig, ax = plt.subplots(figsize=(15, 10)) 
+        
+        bars = ax.bar(indexes, values)      
+        ax.bar_label(bars) 
+        
+        ax.yaxis.set_ticklabels([])
+        
+        plt.title("histogramme de répétitions des mots")
+        plt.ylabel('nombre de mots répétés')
+        plt.xlabel('nombre de répétitions')
+        plt.savefig(args.img[:-4] + '_repetitions.png')
+        plt.show()
 
     # plot figure
     plt.figure(figsize=(15, 10))
