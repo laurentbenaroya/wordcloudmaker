@@ -1,7 +1,10 @@
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('agg')
 import numpy as np
 
 from wordcloud import WordCloud
+from PIL import Image
 
 
 if __name__ == "__main__":
@@ -11,6 +14,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generate wordcloud from ordered words/group of words text file")
     parser.add_argument('--txt', type=str,
                         required=True, help='input text file')
+    parser.add_argument('--mask', type=str,
+                        required=True, help='filename of the mask image')    
     parser.add_argument('--img', type=str,
                         required=True, help='filename of the output wordcloud image')
     parser.add_argument('--lang', type=str, default='french',
@@ -29,9 +34,9 @@ if __name__ == "__main__":
         word_dict[line] = count+1
 
     T = len(word_dict)
-    alpha = 0.9
+    alpha = 1.
     z_min = 3
-    z_max = 10
+    z_max = 8
     delta = z_min-z_max
     modified_word_dict = dict()
     frequency_dist = dict()
@@ -42,14 +47,17 @@ if __name__ == "__main__":
         frequency_dist[word] = int(np.floor(delta*((value-1)/(T-1))+z_max))
 
     # generate wordcloud
-    xfig = 6
-    yfig = 3
-    wcloud = WordCloud(colormap=args.map, prefer_horizontal=0.8, height=yfig*100, width=xfig*100).generate_from_frequencies(frequency_dist)
-
+    mask = np.array(Image.open(args.mask))
+    wcloud = WordCloud(background_color="white", colormap=args.map, prefer_horizontal=0.92, mask=mask,
+                       max_font_size=None).fit_words(frequency_dist)
+    def black_color_func(word, font_size, position, orientation, random_state=None,
+                    **kwargs):
+        return "hsl(0, 0%, 0%)"
+    
     # plot figure
-    plt.figure(figsize=(xfig, yfig))
-    plt.imshow(wcloud, interpolation='bilinear', origin='upper')
+    # plt.figure(figsize=(xfig, yfig))
+    plt.imshow(wcloud.recolor(color_func=black_color_func), interpolation='bilinear')  # , origin='upper')
     plt.axis('off')
-    plt.tight_layout(pad=0)
+    # plt.tight_layout(pad=0)
     plt.savefig(args.img)
-    plt.show()
+    # plt.show()
