@@ -7,6 +7,32 @@ from wordcloud import WordCloud
 from PIL import Image
 
 
+def hyperbole(xdim, ydim):
+    xpos = xdim//2
+    ypos = ydim//2
+    a = 50
+    b = 100
+    data = np.full((xdim, ydim, 3), fill_value=255, dtype=np.uint8)
+    data[:, :] = [255, 128, 64]
+    for x in range(xdim):
+        for y in range(ydim):
+            if ((x-xpos)/a)**2-((y-ypos)/b)**2 <= 1:
+                data[x, y, :] = 0
+    return data
+
+
+def ellipse(xdim, ydim, margin=5):
+    a = xdim//2-2*margin
+    b = ydim//2-2*margin
+    # a, b = min(a, b), min(a, b)
+    data = np.full((xdim, ydim, 3), fill_value=255, dtype=np.uint8)
+    for x in range(xdim):
+        for y in range(ydim):
+            if ((x-xdim//2)/a)**2+((y-ydim//2)/b)**2 <= 1 and margin<x<xdim-margin and margin<y<ydim-margin:
+                data[x, y, :] = 0
+    return data
+
+
 if __name__ == "__main__":
 
     import argparse
@@ -14,8 +40,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generate wordcloud from ordered words/group of words text file")
     parser.add_argument('--txt', type=str,
                         required=True, help='input text file')
-    parser.add_argument('--mask', type=str,
-                        required=True, help='filename of the mask image')    
+    parser.add_argument('--mask', type=None,
+                        required=False, help='filename of the mask image')    
     parser.add_argument('--img', type=str,
                         required=True, help='filename of the output wordcloud image')
     parser.add_argument('--lang', type=str, default='french',
@@ -36,7 +62,7 @@ if __name__ == "__main__":
     T = len(word_dict)
     alpha = 1.
     z_min = 3
-    z_max = 8
+    z_max = 5
     delta = z_min-z_max
     modified_word_dict = dict()
     frequency_dist = dict()
@@ -45,18 +71,26 @@ if __name__ == "__main__":
             print(word)
             print(value)
         frequency_dist[word] = int(np.floor(delta*((value-1)/(T-1))+z_max))
-
+    scalex = 2
+    scaley = 1
+    width = 200*scalex  # 400*scalex
+    height = 200*scaley
     # generate wordcloud
-    mask = np.array(Image.open(args.mask))
-    wcloud = WordCloud(background_color="white", colormap=args.map, prefer_horizontal=0.92, mask=mask,
-                       max_font_size=None).fit_words(frequency_dist)
-    def black_color_func(word, font_size, position, orientation, random_state=None,
-                    **kwargs):
-        return "hsl(0, 0%, 0%)"
+    if args.mask is not None:
+        mask = np.array(Image.open(args.mask))
+    else:
+        mask = ellipse(width, height)
+    # wcloud = WordCloud(background_color="ivory", colormap=args.map, prefer_horizontal=0.72, mask=mask,
+    #                    max_font_size=None).fit_words(frequency_dist)        
+    wcloud = WordCloud(background_color="lightgray", colormap=args.map, prefer_horizontal=0.9, mask=mask,
+                       contour_width=3, contour_color='gray', max_font_size=None,
+                       height=height, width=width).fit_words(frequency_dist)
     
     # plot figure
     # plt.figure(figsize=(xfig, yfig))
-    plt.imshow(wcloud.recolor(color_func=black_color_func), interpolation='bilinear')  # , origin='upper')
+    # recolor black
+    # plt.imshow(wcloud.recolor(color_func=lambda *args, **kwargs: "hsl(0, 0%, 0%)"), interpolation='bilinear')  # , origin='upper')
+    plt.imshow(wcloud, interpolation='bilinear')  # , origin='upper')
     plt.axis('off')
     # plt.tight_layout(pad=0)
     plt.savefig(args.img)
