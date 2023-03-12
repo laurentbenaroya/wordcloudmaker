@@ -3,9 +3,72 @@ import matplotlib
 matplotlib.use('agg')
 import numpy as np
 
-from wordcloud import WordCloud
+from wordcloud import WordCloud, get_single_color_func
 from PIL import Image
 
+
+class SimpleGroupedColorFunc(object):
+    """Create a color function object which assigns EXACT colors
+       to certain words based on the color to words mapping
+
+       Parameters
+       ----------
+       color_to_words : dict(str -> list(str))
+         A dictionary that maps a color to the list of words.
+
+       default_color : str
+         Color that will be assigned to a word that's not a member
+         of any value from color_to_words.
+    """
+
+    def __init__(self, color_to_words, default_color):
+        self.word_to_color = {word: color
+                              for (color, words) in color_to_words.items()
+                              for word in words}
+
+        self.default_color = default_color
+
+    def __call__(self, word, **kwargs):
+        return self.word_to_color.get(word, self.default_color)
+
+
+class GroupedColorFunc(object):
+    """Create a color function object which assigns DIFFERENT SHADES of
+       specified colors to certain words based on the color to words mapping.
+
+       Uses wordcloud.get_single_color_func
+
+       Parameters
+       ----------
+       color_to_words : dict(str -> list(str))
+         A dictionary that maps a color to the list of words.
+
+       default_color : str
+         Color that will be assigned to a word that's not a member
+         of any value from color_to_words.
+    """
+
+    def __init__(self, color_to_words, default_color):
+        self.color_func_to_words = [
+            (get_single_color_func(color), set(words))
+            for (color, words) in color_to_words.items()]
+
+        self.default_color_func = get_single_color_func(default_color)
+
+    def get_color_func(self, word):
+        """Returns a single_color_func associated with the word"""
+        try:
+            color_func = next(
+                color_func for (color_func, words) in self.color_func_to_words
+                if word in words)
+        except StopIteration:
+            color_func = self.default_color_func
+
+        return color_func
+
+    def __call__(self, word, **kwargs):
+        return self.get_color_func(word)(word, **kwargs)
+    
 
 def hyperbole(xdim, ydim):
     xpos = xdim//2
@@ -55,9 +118,44 @@ if __name__ == "__main__":
 
     lines = open(args.txt).readlines()
     word_dict = dict()
-    for count, line in enumerate(lines):
+    wc_colors = {1: 'black', 2: 'red'}
+    # init color dict
+    color_to_words = dict()
+    for col in wc_colors.values():
+        color_to_words[col] = []
+
+    # collect words for each colors, separated by a empty line in the text file
+    col = 1
+    count = 0
+    for line in lines:
         line = line.strip()
+        if line == "":
+            col += 1
+            continue
+        mycolor = wc_colors[col]
+        color_to_words[mycolor].append(line)        
         word_dict[line] = count+1
+        count += 1
+    print(color_to_words)
+    
+    # Words that are not in any of the color_to_words values
+    # will be colored with a grey single color function
+    default_color = 'grey'
+
+    randomizeorder = True
+    
+    seed = 123456
+    np.random.seed(seed)
+    
+    perm = np.random.permutation(len(word_dict))
+    print(perm)
+    import copy
+    word_dict_tmp = copy.copy(word_dict)
+    if randomizeorder:
+        for k, v in word_dict.items():
+            word_dict_tmp[k] = perm[v-1]+1
+        word_dict = copy.copy(word_dict_tmp)
+        del word_dict_tmp
 
     T = len(word_dict)
     alpha = 1.
@@ -71,20 +169,29 @@ if __name__ == "__main__":
             print(word)
             print(value)
         frequency_dist[word] = int(np.floor(delta*((value-1)/(T-1))+z_max))
-    scalex = 2
-    scaley = 1
-    width = 200*scalex  # 400*scalex
-    height = 200*scaley
+
+    width = 400
+    height = 200
+
     # generate wordcloud
     if args.mask is not None:
         mask = np.array(Image.open(args.mask))
     else:
-        mask = ellipse(width, height)
+        mask = None   # ellipse(width, height)
     # wcloud = WordCloud(background_color="ivory", colormap=args.map, prefer_horizontal=0.72, mask=mask,
     #                    max_font_size=None).fit_words(frequency_dist)        
-    wcloud = WordCloud(background_color="lightgray", colormap=args.map, prefer_horizontal=0.9, mask=mask,
+    wcloud = WordCloud(background_color="lightgray", colormap=args.map, prefer_horizontal=0.8, mask=mask,
                        contour_width=3, contour_color='gray', max_font_size=None,
                        height=height, width=width).fit_words(frequency_dist)
+
+    # Create a color function with single tone
+    # grouped_color_func = SimpleGroupedColorFunc(color_to_words, default_color)
+
+    # Create a color function with multiple tones
+    grouped_color_func = GroupedColorFunc(color_to_words, default_color)
+
+    # Apply our color function
+    wcloud.recolor(color_func=grouped_color_func)
     
     # plot figure
     # plt.figure(figsize=(xfig, yfig))
